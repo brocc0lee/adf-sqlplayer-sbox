@@ -1,0 +1,9 @@
+{
+	"name": "sqlplayer-poc",
+	"location": "eastus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "7de67cf9-ea82-40fc-9d9e-f4529fada39a",
+		"tenantId": "0669527b-41b4-43f6-9031-92cc70228f3f"
+	}
+}

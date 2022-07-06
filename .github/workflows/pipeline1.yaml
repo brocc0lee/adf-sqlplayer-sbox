@@ -1,0 +1,79 @@
+name: Selective ADF Publish for pipeline1
+
+on:
+  workflow_dispatch:
+    inputs:
+      StopStartTriggers:
+        type: boolean
+        description: 'Stop and start relevant triggers? (default: true)'
+        required: false
+        default: true
+      DoNotStopStartExcludedTriggers:
+        type: boolean
+        description: 'Do not stop and start non-relevant triggers? (default: true)'
+        required: false
+        default: true
+  push:
+    paths:
+      - "root/pipelines/pipeline1.json"
+      - ".github/workflows/pipeline1.yaml"
+      # Define additional resources that are relevant to this pipeline
+
+env:
+  pipelineName: 'pipeline1'
+  rootDirectoryName: 'root'
+  triggerDirectoryName: 'trigger'
+  adfName: 'sqlplayer-poc'
+  adfResourceGroup: 'adf-sandbox'
+  location: 'eastus'
+
+jobs:
+  job_publish_pipeline:
+    name: Publish-Pipeline
+    runs-on: windows-latest
+    environment:
+      name: uat
+    steps:
+      - name: Install ADF dependencies
+        pwsh: |
+          Install-Module Az.DataFactory -MinimumVersion "1.10.0" -Force
+          Install-Module -Name "azure.datafactory.tools" -Force
+          Import-Module -Name "azure.datafactory.tools" -Force
+      - name: Initialize ADF Tools
+        pwsh: |
+          $opt = New-AdfPublishOption
+          $opt.StopStartTriggers = $env:StopStartTriggers
+          $opt.DoNotStopStartExcludedTriggers = $env:DoNotStopStartExcludedTriggers
+
+      - name: Retrieve relevant triggers
+        pwsh: |
+
+          Get-ChildItem $env:rootDirectoryName/$env:triggerDirectoryName -Filter *.json |
+          Foreach-Object {
+            $content = Get-Content $_.FullName
+            $jsonContent = $content | ConvertFrom-Json
+            $triggerName = $jsonContent.name
+            $props = $jsonContent.properties
+
+            if ($props.pipelines  | where { $_.pipelineReference.referenceName -eq $targetPipeline }) {
+                Write-Host -ForegroundColor Green "$($_.Name) contains $targetPipeline"
+                # $triggerArr += $content | ConvertFrom-Json | select name
+                Write-Host -ForegroundColor Yellow "Adding trigger: $triggerName to ADF publish options for stop/start"
+                $opt.Includes.Add("trigger.$triggerName", "")
+            }
+            else {
+                Write-Debug "$($_.Name) DOES NOT contain $targetPipeline"
+            }    
+          }
+      - name: Test and Validate
+        pwsh: |
+          Test-AdfCode -RootFolder "$env:rootDirectoryName"
+
+      - name: Publish to ADF
+        pwsh: |
+          Publish-AdfV2FromJson -RootFolder "$env:rootDirectoryName" `
+            -ResourceGroupName "$env:adfResourceGroup" `
+            -DataFactoryName "$env:adfName" `
+            -Location "$env:location" `
+            -Option $opt
+

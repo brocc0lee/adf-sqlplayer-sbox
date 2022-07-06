@@ -1,0 +1,33 @@
+{
+    "LS_AzureDatabricks": [
+      {
+        "name": "$.properties.typeProperties.existingClusterId",
+        "value": "$($Env:DatabricksClusterId)",
+        "action": "add"
+      },
+      {
+        "name": "$.properties.typeProperties.encryptedCredential",
+        "value": "",
+        "action": "remove"
+      }
+    ],
+    "LS_AzureKeyVault": [
+      {
+        "name": "$.properties.typeProperties.baseUrl",
+        "value": "https://kv-$($Env:Environment).vault.azure.net/",
+        "action": "update"
+      }
+    ],
+    "PL_Demo": [
+      {
+        "name": "$.activities[1].typeProperties.waitTimeInSeconds",
+        "value": "30",
+        "action": "update"
+      },
+      {
+        "name": "$.activities['Copy Data'].typeProperties.waitTimeInSeconds",
+        "value": "30",
+        "action": "update"
+      }
+    ]
+  }
